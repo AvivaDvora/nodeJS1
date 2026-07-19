@@ -9,6 +9,10 @@ const app = express();
 // ======================================
 app.use(express.json()); // פיענוח JSON מגוף הבקשה
 
+// מידלוור אימות — רץ על כל בקשה לפני שהיא מגיעה ל-Router
+const authMiddleware = require('./middleware/authMiddleware');
+app.use(authMiddleware);
+
 // ======================================
 // ייבוא Routers
 // ======================================
