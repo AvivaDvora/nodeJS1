@@ -4,6 +4,7 @@
 const enrollmentData = require('../data/enrollment');
 const studentData = require('../data/students');
 const courseData = require('../data/courses');
+const { NotFoundError, ValidationError, DuplicateError } = require('../utils/errors');
 
 function getAllEnrollments() {
   return enrollmentData.getAll();
@@ -12,7 +13,7 @@ function getAllEnrollments() {
 function getEnrollmentById(id) {
   const enrollment = enrollmentData.getById(id);
   if (!enrollment) {
-    throw new Error('Enrollment not found');
+    throw new NotFoundError('Enrollment not found');
   }
   return enrollment;
 }
@@ -20,19 +21,19 @@ function getEnrollmentById(id) {
 function createEnrollment({ studentId, courseId }) {
   // בדיקת שדות חובה
   if (!studentId || !courseId) {
-    throw new Error('Student ID and Course ID are required');
+    throw new ValidationError('Student ID and Course ID are required');
   }
 
   // בדיקה שהסטודנט קיים
   const student = studentData.getById(studentId);
   if (!student) {
-    throw new Error('Student not found');
+    throw new NotFoundError('Student not found');
   }
 
   // בדיקה שהקורס קיים
   const course = courseData.getById(courseId);
   if (!course) {
-    throw new Error('Course not found');
+    throw new NotFoundError('Course not found');
   }
 
   // בדיקת כפילות — אותו סטודנט לא יכול להירשם פעמיים לאותו קורס
@@ -41,7 +42,7 @@ function createEnrollment({ studentId, courseId }) {
     enroll => enroll.courseId === parseInt(courseId)
   );
   if (alreadyEnrolled) {
-    throw new Error('Student is already enrolled in this course');
+    throw new DuplicateError('Student is already enrolled in this course');
   }
 
   return enrollmentData.create({ studentId, courseId });
@@ -50,24 +51,26 @@ function createEnrollment({ studentId, courseId }) {
 function updateEnrollment(id, { studentId, courseId }) {
   const enrollment = enrollmentData.getById(id);
   if (!enrollment) {
-    throw new Error('Enrollment not found');
+    throw new NotFoundError('Enrollment not found');
   }
 
+  // אם נשלח studentId — בדיקה שהסטודנט החדש קיים
   if (studentId !== undefined) {
     const student = studentData.getById(studentId);
     if (!student) {
-      throw new Error('Student not found');
+      throw new NotFoundError('Student not found');
     }
   }
 
+  // אם נשלח courseId — בדיקה שהקורס החדש קיים
   if (courseId !== undefined) {
     const course = courseData.getById(courseId);
     if (!course) {
-      throw new Error('Course not found');
+      throw new NotFoundError('Course not found');
     }
   }
 
-  // בדיקת כפילות אחרי עדכון
+  // בדיקת כפילות (רק אם אחד השדות השתנה)
   const sid = studentId !== undefined ? parseInt(studentId) : enrollment.studentId;
   const cid = courseId !== undefined ? parseInt(courseId) : enrollment.courseId;
 
@@ -76,7 +79,7 @@ function updateEnrollment(id, { studentId, courseId }) {
     enroll => enroll.courseId === cid && enroll.id !== parseInt(id)
   );
   if (duplicate) {
-    throw new Error('Student is already enrolled in this course');
+    throw new DuplicateError('Student is already enrolled in this course');
   }
 
   return enrollmentData.update(id, { studentId, courseId });
@@ -85,7 +88,7 @@ function updateEnrollment(id, { studentId, courseId }) {
 function deleteEnrollment(id) {
   const enrollment = enrollmentData.getById(id);
   if (!enrollment) {
-    throw new Error('Enrollment not found');
+    throw new NotFoundError('Enrollment not found');
   }
   enrollmentData.remove(id);
 }

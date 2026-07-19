@@ -2,6 +2,7 @@
 // תפקיד: לוגיקה עסקית של קורסים — ולידציה וכללי עסקים
 
 const courseData = require('../data/courses');
+const { NotFoundError, ValidationError } = require('../utils/errors');
 
 function getAllCourses() {
   return courseData.getAll();
@@ -10,17 +11,17 @@ function getAllCourses() {
 function getCourseById(id) {
   const course = courseData.getById(id);
   if (!course) {
-    throw new Error('Course not found');
+    throw new NotFoundError('Course not found');
   }
   return course;
 }
 
 function createCourse({ name, description }) {
   if (!name || name.trim().length === 0) {
-    throw new Error('Name is required');
+    throw new ValidationError('Name is required');
   }
   if (!description || description.trim().length === 0) {
-    throw new Error('Description is required');
+    throw new ValidationError('Description is required');
   }
   return courseData.create({
     name: name.trim(),
@@ -31,13 +32,13 @@ function createCourse({ name, description }) {
 function updateCourse(id, { name, description }) {
   const course = courseData.getById(id);
   if (!course) {
-    throw new Error('Course not found');
+    throw new NotFoundError('Course not found');
   }
   if (name !== undefined && name.trim().length === 0) {
-    throw new Error('Name cannot be empty');
+    throw new ValidationError('Name cannot be empty');
   }
   if (description !== undefined && description.trim().length === 0) {
-    throw new Error('Description cannot be empty');
+    throw new ValidationError('Description cannot be empty');
   }
   return courseData.update(id, {
     name: name ? name.trim() : undefined,
@@ -48,7 +49,7 @@ function updateCourse(id, { name, description }) {
 function deleteCourse(id) {
   const course = courseData.getById(id);
   if (!course) {
-    throw new Error('Course not found');
+    throw new NotFoundError('Course not found');
   }
   courseData.remove(id);
 }
