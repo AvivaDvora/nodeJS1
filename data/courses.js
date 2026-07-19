@@ -41,11 +41,38 @@ const courses = [
   { id: 40, name: 'Artificial Intelligence', description: 'Field of Computer Science that Focuses on Creating Intelligent Machines that Can Perform Tasks that Typically Require Human Intelligence' }
 ];
 
-function getCourse(id) {
-  return courses.find(course => course.id === id);
+let nextId = 41; // ממשיך מהמזהה האחרון שהיה ב-index.js המקורי
+
+function getAll() {
+  return courses;
 }
 
-module.exports = {
-  courses,
-  getCourse
-};
+function getById(id) {
+  return courses.find(course => course.id === parseInt(id));
+}
+
+function create({ name, description }) {
+  const newCourse = {
+    id: nextId++,
+    name,
+    description
+  };
+  courses.push(newCourse);
+  return newCourse;
+}
+
+function update(id, { name, description }) {
+  const course = getById(id);
+  if (!course) return null;
+  if (name !== undefined) course.name = name;
+  if (description !== undefined) course.description = description;
+  return course;
+}
+
+function remove(id) {
+  const index = courses.findIndex(course => course.id === parseInt(id));
+  if (index === -1) return null;
+  return courses.splice(index, 1)[0];
+}
+
+module.exports = { getAll, getById, create, update, remove };

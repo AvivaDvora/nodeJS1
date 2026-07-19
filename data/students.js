@@ -157,6 +157,39 @@ const students = [
     { id: 156, name: 'Noam Shir', age: 20 },
     { id: 157, name: 'Ofer Galit', age: 23 }
 ];
-module.exports = {
-  students
-};
+
+let nextId = 158; // ממשיך מהמזהה האחרון שהיה ב-index.js המקורי
+
+function getAll() {
+  return students;
+}
+
+function getById(id) {
+  return students.find(student => student.id === parseInt(id));
+}
+
+function create({ name, age }) {
+  const newStudent = {
+    id: nextId++,
+    name,
+    age
+  };
+  students.push(newStudent);
+  return newStudent;
+}
+
+function update(id, { name, age }) {
+  const student = getById(id);
+  if (!student) return null;
+  if (name !== undefined) student.name = name;
+  if (age !== undefined) student.age = age;
+  return student;
+}
+
+function remove(id) {
+  const index = students.findIndex(student => student.id === parseInt(id));
+  if (index === -1) return null;
+  return students.splice(index, 1)[0];
+}
+
+module.exports = { getAll, getById, create, update, remove };
