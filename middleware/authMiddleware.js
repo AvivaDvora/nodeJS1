@@ -2,7 +2,7 @@
 // תפקיד: אימות בקשות נכנסות — בדיקה שה-header auth-key קיים ותקין
 // אם האימות נכשל — מחזיר 401. אם הצליח — מעביר הלאה
 
-const AUTH_KEY = 'my-secret-key-2024';
+const AUTH_KEY = process.env.AUTH_KEY || 'my-secret-key-2024';
 
 function authMiddleware(req, res, next) {
   console.log('🔐 [auth-middleware] נכנסתי! בודק auth-key...');
