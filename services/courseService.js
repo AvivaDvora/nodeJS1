@@ -1,5 +1,6 @@
 // services/courseService.js
 // תפקיד: לוגיקה עסקית של קורסים — ולידציה וכללי עסקים
+// כל פונקציה מחזירה Promise; שגיאות עולות ל-Controller דרך ה-catch
 
 const courseData = require('../data/courses');
 const { NotFoundError, ValidationError } = require('../utils/errors');
@@ -9,11 +10,12 @@ function getAllCourses() {
 }
 
 function getCourseById(id) {
-  const course = courseData.getById(id);
-  if (!course) {
-    throw new NotFoundError('Course not found');
-  }
-  return course;
+  return courseData.getById(id).then((course) => {
+    if (!course) {
+      throw new NotFoundError('Course not found');
+    }
+    return course;
+  });
 }
 
 function createCourse({ name, description }) {
@@ -30,28 +32,30 @@ function createCourse({ name, description }) {
 }
 
 function updateCourse(id, { name, description }) {
-  const course = courseData.getById(id);
-  if (!course) {
-    throw new NotFoundError('Course not found');
-  }
-  if (name !== undefined && name.trim().length === 0) {
-    throw new ValidationError('Name cannot be empty');
-  }
-  if (description !== undefined && description.trim().length === 0) {
-    throw new ValidationError('Description cannot be empty');
-  }
-  return courseData.update(id, {
-    name: name ? name.trim() : undefined,
-    description: description ? description.trim() : undefined
+  return courseData.getById(id).then((course) => {
+    if (!course) {
+      throw new NotFoundError('Course not found');
+    }
+    if (name !== undefined && name.trim().length === 0) {
+      throw new ValidationError('Name cannot be empty');
+    }
+    if (description !== undefined && description.trim().length === 0) {
+      throw new ValidationError('Description cannot be empty');
+    }
+    return courseData.update(id, {
+      name: name ? name.trim() : undefined,
+      description: description ? description.trim() : undefined
+    });
   });
 }
 
 function deleteCourse(id) {
-  const course = courseData.getById(id);
-  if (!course) {
-    throw new NotFoundError('Course not found');
-  }
-  courseData.remove(id);
+  return courseData.getById(id).then((course) => {
+    if (!course) {
+      throw new NotFoundError('Course not found');
+    }
+    return courseData.remove(id);
+  });
 }
 
 module.exports = { getAllCourses, getCourseById, createCourse, updateCourse, deleteCourse };

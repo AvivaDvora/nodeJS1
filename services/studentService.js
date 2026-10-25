@@ -1,5 +1,6 @@
 // services/studentService.js
 // תפקיד: לוגיקה עסקית של סטודנטים — ולידציה וכללי עסקים
+// כל פונקציה מחזירה Promise; שגיאות עולות ל-Controller דרך ה-catch
 
 const studentData = require('../data/students');
 const { NotFoundError, ValidationError } = require('../utils/errors');
@@ -9,11 +10,12 @@ function getAllStudents() {
 }
 
 function getStudentById(id) {
-  const student = studentData.getById(id);
-  if (!student) {
-    throw new NotFoundError('Student not found');
-  }
-  return student;
+  return studentData.getById(id).then((student) => {
+    if (!student) {
+      throw new NotFoundError('Student not found');
+    }
+    return student;
+  });
 }
 
 function createStudent({ name, age }) {
@@ -33,30 +35,32 @@ function createStudent({ name, age }) {
 }
 
 function updateStudent(id, { name, age }) {
-  const student = studentData.getById(id);
-  if (!student) {
-    throw new NotFoundError('Student not found');
-  }
-  if (name !== undefined && name.trim().length === 0) {
-    throw new ValidationError('Name cannot be empty');
-  }
-  if (age !== undefined) {
-    if (typeof age !== 'number' || age < 1 || age > 120) {
-      throw new ValidationError('Age must be a number between 1 and 120');
+  return studentData.getById(id).then((student) => {
+    if (!student) {
+      throw new NotFoundError('Student not found');
     }
-  }
-  return studentData.update(id, {
-    name: name ? name.trim() : undefined,
-    age: age !== undefined ? age : undefined
+    if (name !== undefined && name.trim().length === 0) {
+      throw new ValidationError('Name cannot be empty');
+    }
+    if (age !== undefined) {
+      if (typeof age !== 'number' || age < 1 || age > 120) {
+        throw new ValidationError('Age must be a number between 1 and 120');
+      }
+    }
+    return studentData.update(id, {
+      name: name ? name.trim() : undefined,
+      age: age !== undefined ? age : undefined
+    });
   });
 }
 
 function deleteStudent(id) {
-  const student = studentData.getById(id);
-  if (!student) {
-    throw new NotFoundError('Student not found');
-  }
-  studentData.remove(id);
+  return studentData.getById(id).then((student) => {
+    if (!student) {
+      throw new NotFoundError('Student not found');
+    }
+    return studentData.remove(id);
+  });
 }
 
 module.exports = { getAllStudents, getStudentById, createStudent, updateStudent, deleteStudent };

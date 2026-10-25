@@ -1,5 +1,6 @@
 // services/enrollmentService.js
 // תפקיד: לוגיקה עסקית של הרשמות — ולידציה, בדיקת תקינות קשרים
+// כל פונקציה מחזירה Promise; בדיקות תלויות-נתונים יושבות בתוך ה-then
 
 const enrollmentData = require('../data/enrollment');
 const studentData = require('../data/students');
@@ -11,11 +12,12 @@ function getAllEnrollments() {
 }
 
 function getEnrollmentById(id) {
-  const enrollment = enrollmentData.getById(id);
-  if (!enrollment) {
-    throw new NotFoundError('Enrollment not found');
-  }
-  return enrollment;
+  return enrollmentData.getById(id).then((enrollment) => {
+    if (!enrollment) {
+      throw new NotFoundError('Enrollment not found');
+    }
+    return enrollment;
+  });
 }
 
 function createEnrollment({ studentId, courseId }) {
@@ -24,73 +26,84 @@ function createEnrollment({ studentId, courseId }) {
     throw new ValidationError('Student ID and Course ID are required');
   }
 
-  // בדיקה שהסטודנט קיים
-  const student = studentData.getById(studentId);
-  if (!student) {
-    throw new NotFoundError('Student not found');
-  }
-
-  // בדיקה שהקורס קיים
-  const course = courseData.getById(courseId);
-  if (!course) {
-    throw new NotFoundError('Course not found');
-  }
-
-  // בדיקת כפילות — אותו סטודנט לא יכול להירשם פעמיים לאותו קורס
-  const existingEnrollments = enrollmentData.getByStudentId(studentId);
-  const alreadyEnrolled = existingEnrollments.find(
-    enroll => enroll.courseId === parseInt(courseId)
-  );
-  if (alreadyEnrolled) {
-    throw new DuplicateError('Student is already enrolled in this course');
-  }
-
-  return enrollmentData.create({ studentId, courseId });
+  // הסטודנט והקורס נקראים במקביל — אין תלות ביניהם
+  return Promise.all([
+    studentData.getById(studentId),
+    courseData.getById(courseId)
+  ])
+    .then(([student, course]) => {
+      if (!student) {
+        throw new NotFoundError('Student not found');
+      }
+      if (!course) {
+        throw new NotFoundError('Course not found');
+      }
+      // בדיקת כפילות — אותו סטודנט לא יכול להירשם פעמיים לאותו קורס
+      return enrollmentData.getByStudentId(studentId);
+    })
+    .then((existingEnrollments) => {
+      const alreadyEnrolled = existingEnrollments.find(
+        (enroll) => enroll.courseId === parseInt(courseId)
+      );
+      if (alreadyEnrolled) {
+        throw new DuplicateError('Student is already enrolled in this course');
+      }
+      return enrollmentData.create({ studentId, courseId });
+    });
 }
 
 function updateEnrollment(id, { studentId, courseId }) {
-  const enrollment = enrollmentData.getById(id);
-  if (!enrollment) {
-    throw new NotFoundError('Enrollment not found');
-  }
-
-  // אם נשלח studentId — בדיקה שהסטודנט החדש קיים
-  if (studentId !== undefined) {
-    const student = studentData.getById(studentId);
-    if (!student) {
-      throw new NotFoundError('Student not found');
+  return enrollmentData.getById(id).then((enrollment) => {
+    if (!enrollment) {
+      throw new NotFoundError('Enrollment not found');
     }
-  }
 
-  // אם נשלח courseId — בדיקה שהקורס החדש קיים
-  if (courseId !== undefined) {
-    const course = courseData.getById(courseId);
-    if (!course) {
-      throw new NotFoundError('Course not found');
-    }
-  }
+    // אם נשלח studentId — בדיקה שהסטודנט החדש קיים
+    const studentCheck = studentId === undefined
+      ? Promise.resolve(true)
+      : studentData.getById(studentId).then((student) => {
+          if (!student) {
+            throw new NotFoundError('Student not found');
+          }
+          return true;
+        });
 
-  // בדיקת כפילות (רק אם אחד השדות השתנה)
-  const sid = studentId !== undefined ? parseInt(studentId) : enrollment.studentId;
-  const cid = courseId !== undefined ? parseInt(courseId) : enrollment.courseId;
+    // אם נשלח courseId — בדיקה שהקורס החדש קיים
+    const courseCheck = courseId === undefined
+      ? Promise.resolve(true)
+      : courseData.getById(courseId).then((course) => {
+          if (!course) {
+            throw new NotFoundError('Course not found');
+          }
+          return true;
+        });
 
-  const existingEnrollments = enrollmentData.getByStudentId(sid);
-  const duplicate = existingEnrollments.find(
-    enroll => enroll.courseId === cid && enroll.id !== parseInt(id)
-  );
-  if (duplicate) {
-    throw new DuplicateError('Student is already enrolled in this course');
-  }
+    // שתי הבדיקות בלתי תלויות — רצות במקביל
+    return Promise.all([studentCheck, courseCheck]).then(() => {
+      // בדיקת כפילות (רק אם אחד השדות השתנה)
+      const sid = studentId !== undefined ? parseInt(studentId) : enrollment.studentId;
+      const cid = courseId !== undefined ? parseInt(courseId) : enrollment.courseId;
 
-  return enrollmentData.update(id, { studentId, courseId });
+      return enrollmentData.getByStudentId(sid).then((existingEnrollments) => {
+        const duplicate = existingEnrollments.find(
+          (enroll) => enroll.courseId === cid && enroll.id !== parseInt(id)
+        );
+        if (duplicate) {
+          throw new DuplicateError('Student is already enrolled in this course');
+        }
+        return enrollmentData.update(id, { studentId, courseId });
+      });
+    });
+  });
 }
 
 function deleteEnrollment(id) {
-  const enrollment = enrollmentData.getById(id);
-  if (!enrollment) {
-    throw new NotFoundError('Enrollment not found');
-  }
-  enrollmentData.remove(id);
+  return enrollmentData.getById(id).then((enrollment) => {
+    if (!enrollment) {
+      throw new NotFoundError('Enrollment not found');
+    }
+    return enrollmentData.remove(id);
+  });
 }
 
 module.exports = { getAllEnrollments, getEnrollmentById, createEnrollment, updateEnrollment, deleteEnrollment };
